@@ -29,6 +29,7 @@ type SaleHandler struct {
 }
 
 func (h *SaleHandler) Get() Sale {
+	h.client.LogInfo("getting sale", "sale", h.Sale)
 	return h.Sale
 }
 
@@ -36,6 +37,7 @@ func (h *SaleHandler) WithCreditCard(cc CreditCard) SaleInterface {
 	h.Sale.Payment.DebitCard = nil
 	h.Sale.Payment.CreditCard = &cc
 	h.Sale.Payment.Type = "PhysicalCreditCard"
+	h.client.LogInfo("setting credit card", "credit_card", cc)
 	return h
 }
 
@@ -43,31 +45,37 @@ func (h *SaleHandler) WithDebitCard(dc DebitCard) SaleInterface {
 	h.Sale.Payment.CreditCard = nil
 	h.Sale.Payment.DebitCard = &dc
 	h.Sale.Payment.Type = "PhysicalDebitCard"
+	h.client.LogInfo("setting debit card", "debit_card", dc)
 	return h
 }
 
 func (h *SaleHandler) SetSoftDescriptor(softDesc string) SaleInterface {
 	h.Sale.Payment.SoftDescriptor = softDesc
+	h.client.LogInfo("setting soft descriptor", "soft_descriptor", softDesc)
 	return h
 }
 
 func (h *SaleHandler) SetPinPadInfo(pinPad PinPadInformation) SaleInterface {
 	h.Sale.Payment.PinPadInformation = &pinPad
+	h.client.LogInfo("setting pin pad info", "pin_pad_info", pinPad)
 	return h
 }
 
 func (h *SaleHandler) SetCustomer(c Customer) SaleInterface {
 	h.Sale.Customer = &c
+	h.client.LogInfo("setting customer", "customer", c)
 	return h
 }
 
 func (h *SaleHandler) SetInterest(interestType Interest) SaleInterface {
 	h.Sale.Payment.Interest = interestType
+	h.client.LogInfo("setting interest", "interest", interestType)
 	return h
 }
 
 func (h *SaleHandler) SetInstallments(installments int) SaleInterface {
 	h.Sale.Payment.Installments = installments
+	h.client.LogInfo("setting installments", "installments", installments)
 	return h
 }
 
@@ -76,34 +84,48 @@ func (h *SaleHandler) SetInstallments(installments int) SaleInterface {
 func (h *SaleHandler) Authorize(ctx context.Context) (Sale, error) {
 	created := Sale{}
 
+	h.client.LogInfo("creating sale", "sale", h.Sale)
+
 	if err := h.validate(); err != nil {
+		h.client.LogError("failed to validate sale", "sale", h.Sale, "error", err)
 		return created, err
 	}
 
 	select {
 	case <-ctx.Done():
+		h.client.LogError("context canceled or timed out before sending sale request", "error", ctx.Err())
 		return Sale{}, ctx.Err()
 	default:
+		h.client.LogInfo("sending sale request", "sale", h.Sale)
 	}
 
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s%s", h.client.env.APIUrl, "/1/physicalSales/"), h.Sale)
 	if err != nil {
+		h.client.LogError("failed to create sale request", "error", err)
 		return Sale{}, err
 	}
+
+	h.client.LogInfo("sale request created", "method", req.Method, "url", req.URL.String())
+	h.client.LogInfo("request headers", "headers", req.Header)
+	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &created)
 	if err != nil {
+		h.client.LogError("failed to send sale request", "error", err)
 		return Sale{}, err
 	}
 
+	h.client.LogInfo("sale request response received", "created", created)
 	h.Sale.Payment.ID = created.Payment.ID
 	h.Sale.Payment.Status = created.Payment.Status
 	h.Sale.Payment.ConfirmationStatus = created.Payment.ConfirmationStatus
 
 	if created.Payment.Status != StatusPaymentConfirmed {
+		h.client.LogError("payment is not confirmed", "status", created.Payment.Status)
 		return created, errors.Join(ErrPaymentIsNotConfirmed, fmt.Errorf("status: %s", created.Payment.Status))
 	}
 
+	h.client.LogInfo("payment is confirmed", "status", created.Payment.Status)
 	return created, nil
 }
 
@@ -115,17 +137,25 @@ func (h *SaleHandler) Confirm(ctx context.Context) (ConfirmResponse, error) {
 	var response ConfirmResponse
 
 	body := map[string]string{"EmvData": h.Sale.Payment.getEmvData()}
+	h.client.LogInfo("confirming payment", "sale_id", h.Sale.Payment.ID, "emv_data", body["EmvData"])
 
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPut, fmt.Sprintf("%s/1/physicalSales/%s/confirmation", h.client.env.APIUrl, h.Sale.Payment.ID), body)
 	if err != nil {
+		h.client.LogError("failed to create confirm payment request", "sale_id", h.Sale.Payment.ID, "error", err)
 		return response, err
 	}
+
+	h.client.LogInfo("confirm payment request created", "method", req.Method, "url", req.URL.String())
+	h.client.LogInfo("request headers", "headers", req.Header)
+	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &response)
 	if err != nil {
+		h.client.LogError("failed to send confirm payment request", "sale_id", h.Sale.Payment.ID, "error", err)
 		return response, err
 	}
 
+	h.client.LogInfo("confirm payment response received", "confirm_response", response)
 	return response, nil
 }
 
