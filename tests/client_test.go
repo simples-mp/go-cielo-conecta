@@ -11,8 +11,11 @@ func TestNewClient(t *testing.T) {
 		ID:     os.Getenv("MERCHANT_ID"),
 		Secret: os.Getenv("MERCHANT_SECRET"),
 	}
+	if merchant.ID == "" || merchant.Secret == "" {
+		t.Skip("MERCHANT_ID and MERCHANT_SECRET are required for this integration test")
+	}
 
-	client, err := NewClient(merchant, SandboxEnvironment)
+	client, err := NewClient(SandBoxEnv.WithMerchant(merchant))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,8 +30,11 @@ func TestBinTables(t *testing.T) {
 		ID:     os.Getenv("MERCHANT_ID"),
 		Secret: os.Getenv("MERCHANT_SECRET"),
 	}
+	if merchant.ID == "" || merchant.Secret == "" {
+		t.Skip("MERCHANT_ID and MERCHANT_SECRET are required for this integration test")
+	}
 
-	client, err := NewClient(merchant, HomologationEnvironment)
+	client, err := NewClient(HmlEnv.WithMerchant(merchant))
 	if err != nil {
 		t.Fatal(err)
 	}

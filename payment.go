@@ -40,23 +40,23 @@ func (c *Client) CreateSale(info SaleInfo) SaleInterface {
 func (c *Client) GetPaymentByID(ctx context.Context, paymentId string) (Sale, error) {
 	var sale Sale
 
-	fmt.Println("GetPaymentByID paymentId:", paymentId)
+	c.LogInfo("getting payment by id", "payment_id", paymentId)
 
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/1/physicalSales/%s", c.env.APIQueryUrl, paymentId), nil)
 	if err != nil {
-		fmt.Println("GetPaymentByID request error:", err)
+		c.LogError("failed to create get payment by id request", "payment_id", paymentId, "error", err)
 		return sale, err
 	}
 
-	fmt.Println("GetPaymentByID request:", req)
+	c.LogInfo("get payment by id request created", "method", req.Method, "url", req.URL.String())
 
 	err = c.Send(req, &sale)
 	if err != nil {
-		fmt.Println("GetPaymentByID send error:", err)
+		c.LogError("failed to send get payment by id request", "payment_id", paymentId, "error", err)
 		return sale, err
 	}
 
-	fmt.Println("GetPaymentByID response:", sale)
+	c.LogInfo("payment by id response received", "sale", sale)
 	return sale, nil
 }
 
@@ -71,24 +71,24 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string, date .
 
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		fmt.Println("GetPaymentByOrderID request error:", err)
+		c.LogError("failed to create get payment by order id request", "order_id", orderID, "error", err)
 		return Sale{}, err
 	}
 
-	fmt.Println("GetPaymentByOrderID request:", req)
+	c.LogInfo("get payment by order id request created", "method", req.Method, "url", req.URL.String())
 
 	err = c.Send(req, &sale)
 	if err != nil {
-		fmt.Println("GetPaymentByOrderID send error:", err)
+		c.LogError("failed to send get payment by order id request", "order_id", orderID, "error", err)
 		return Sale{}, err
 	}
 
 	if len(sale) > 0 {
-		fmt.Println("GetPaymentByOrderID response:", sale[0])
+		c.LogInfo("payment by order id response received", "sale", sale[0])
 		return sale[0], nil
 	}
 
-	fmt.Println("GetPaymentByOrderID response: No sales found")
+	c.LogInfo("payment by order id response received with no sales", "order_id", orderID)
 	return Sale{}, nil
 }
 
@@ -99,7 +99,7 @@ func (c *Client) ReversePayment(ctx context.Context, sale Sale) (ConfirmResponse
 		EmvData:         sale.Payment.getEmvData(),
 	})
 
-	fmt.Println("ReversePayment sale:", sale)
+	c.LogInfo("reversing payment", "sale", sale)
 	return cancel.TryReversePayment(ctx)
 }
 
@@ -111,11 +111,11 @@ func (c *Client) CancelPayment(ctx context.Context, sale Sale, merchantVoidId st
 	})
 
 	var confirmResponse ConfirmResponse
-	fmt.Println("CancelPayment sale:", sale)
+	c.LogInfo("canceling payment", "sale", sale)
 
 	voidResponse, err := cancel.CancelPayment(ctx, merchantVoidId)
 	if err != nil {
-		fmt.Println("CancelPayment error:", err)
+		c.LogError("failed to cancel payment", "sale", sale, "error", err)
 		return confirmResponse, err
 	}
 
@@ -126,13 +126,13 @@ func (c *Client) CancelPayment(ctx context.Context, sale Sale, merchantVoidId st
 		ConfirmationStatus: voidResponse.ConfirmationStatus,
 	}
 
-	fmt.Println("CancelPayment voidResponse:", voidResponse)
+	c.LogInfo("payment cancellation response received", "void_response", voidResponse)
 
 	if voidResponse.CancellationStatus != CancellationStatusAuthorized {
-		fmt.Println("CancelPayment cancellation status not authorized:", voidResponse.CancellationStatus)
+		c.LogError("payment cancellation status not authorized", "cancellation_status", voidResponse.CancellationStatus)
 		return confirmResponse, ErrCancellationStatusNotAuthorized
 	}
 
-	fmt.Println("CancelPayment confirming cancellation for voidID:", voidResponse.VoidId)
+	c.LogInfo("confirming payment cancellation", "void_id", voidResponse.VoidId)
 	return cancel.ConfirmCancel(ctx, voidResponse.VoidId)
 }

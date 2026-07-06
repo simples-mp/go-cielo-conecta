@@ -42,7 +42,7 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 		Card:             h.info.CardVoid,
 	}
 
-	fmt.Println("CancelPayment body:", body)
+	h.client.LogInfo("cancel payment request body created", "body", body)
 
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPost,
 		fmt.Sprintf("%s/1/physicalSales/%s/voids/", h.client.env.APIUrl, h.info.PaymentID),
@@ -52,39 +52,39 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 		return voidResponse, err
 	}
 
-	fmt.Println("CancelPayment request:", req)
+	h.client.LogInfo("cancel payment request created", "method", req.Method, "url", req.URL.String())
 
 	err = h.client.Send(req, &voidResponse)
 	if err != nil {
-		fmt.Println("CancelPayment error:", err)
+		h.client.LogError("failed to send cancel payment request", "error", err)
 		return voidResponse, err
 	}
 
-	fmt.Println("CancelPayment response:", voidResponse)
+	h.client.LogInfo("cancel payment response received", "void_response", voidResponse)
 	return voidResponse, nil
 }
 
 func (h *CancelHandler) ConfirmCancel(ctx context.Context, voidID string) (ConfirmResponse, error) {
 	var confirmResponse = ConfirmResponse{}
 
-	fmt.Println("ConfirmCancel voidID:", voidID)
+	h.client.LogInfo("confirming cancellation", "void_id", voidID)
 
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPut,
 		fmt.Sprintf("%s/1/physicalSales/%s/voids/%s/confirmation", h.client.env.APIUrl, h.info.PaymentID, voidID),
 		nil,
 	)
 	if err != nil {
-		fmt.Println("ConfirmCancel error:", err)
+		h.client.LogError("failed to create confirm cancellation request", "void_id", voidID, "error", err)
 		return confirmResponse, err
 	}
 
 	err = h.client.Send(req, &confirmResponse)
 	if err != nil {
-		fmt.Println("ConfirmCancel send error:", err)
+		h.client.LogError("failed to send confirm cancellation request", "void_id", voidID, "error", err)
 		return confirmResponse, err
 	}
 
-	fmt.Println("ConfirmCancel response:", confirmResponse)
+	h.client.LogInfo("confirm cancellation response received", "confirm_response", confirmResponse)
 	return confirmResponse, nil
 }
 
@@ -97,7 +97,7 @@ func (h *CancelHandler) TryReversePayment(ctx context.Context) (ConfirmResponse,
 
 	body := map[string]string{"EmvData": h.info.EmvData}
 
-	fmt.Println("TryReversePayment body:", body)
+	h.client.LogInfo("reverse payment request body created", "body", body)
 
 	if h.hasPaymentID {
 		req, err = h.client.NewRequestWithContext(ctx, http.MethodDelete,
@@ -112,16 +112,16 @@ func (h *CancelHandler) TryReversePayment(ctx context.Context) (ConfirmResponse,
 	}
 
 	if err != nil {
-		fmt.Println("TryReversePayment error:", err)
+		h.client.LogError("failed to create reverse payment request", "error", err)
 		return ConfirmResponse{}, err
 	}
 
 	err = h.client.Send(req, &result)
 	if err != nil {
-		fmt.Println("TryReversePayment send error:", err)
+		h.client.LogError("failed to send reverse payment request", "error", err)
 		return result, err
 	}
 
-	fmt.Println("TryReversePayment response:", result)
+	h.client.LogInfo("reverse payment response received", "confirm_response", result)
 	return result, nil
 }

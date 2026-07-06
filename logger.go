@@ -71,8 +71,13 @@ func (c *Client) logger(r *http.Request, resp *http.Response) {
 	return l
 } */
 
-func (c *Client) SetLogger(slog *slog.Logger) {
-	c.log = slog.With("source", "cielo-conecta-client")
+func (c *Client) SetLogger(logger *slog.Logger) {
+	if logger == nil {
+		c.log = nil
+		return
+	}
+
+	c.log = logger.With("source", "cielo-conecta-client")
 }
 
 func (c *Client) DefaultLogger() {
