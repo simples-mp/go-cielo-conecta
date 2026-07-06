@@ -42,6 +42,8 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 		Card:             h.info.CardVoid,
 	}
 
+	fmt.Println("CancelPayment body:", body)
+
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPost,
 		fmt.Sprintf("%s/1/physicalSales/%s/voids/", h.client.env.APIUrl, h.info.PaymentID),
 		body,
@@ -50,30 +52,39 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 		return voidResponse, err
 	}
 
+	fmt.Println("CancelPayment request:", req)
+
 	err = h.client.Send(req, &voidResponse)
 	if err != nil {
+		fmt.Println("CancelPayment error:", err)
 		return voidResponse, err
 	}
 
+	fmt.Println("CancelPayment response:", voidResponse)
 	return voidResponse, nil
 }
 
 func (h *CancelHandler) ConfirmCancel(ctx context.Context, voidID string) (ConfirmResponse, error) {
 	var confirmResponse = ConfirmResponse{}
 
+	fmt.Println("ConfirmCancel voidID:", voidID)
+
 	req, err := h.client.NewRequestWithContext(ctx, http.MethodPut,
 		fmt.Sprintf("%s/1/physicalSales/%s/voids/%s/confirmation", h.client.env.APIUrl, h.info.PaymentID, voidID),
 		nil,
 	)
 	if err != nil {
+		fmt.Println("ConfirmCancel error:", err)
 		return confirmResponse, err
 	}
 
 	err = h.client.Send(req, &confirmResponse)
 	if err != nil {
+		fmt.Println("ConfirmCancel send error:", err)
 		return confirmResponse, err
 	}
 
+	fmt.Println("ConfirmCancel response:", confirmResponse)
 	return confirmResponse, nil
 }
 
@@ -85,6 +96,8 @@ func (h *CancelHandler) TryReversePayment(ctx context.Context) (ConfirmResponse,
 	)
 
 	body := map[string]string{"EmvData": h.info.EmvData}
+
+	fmt.Println("TryReversePayment body:", body)
 
 	if h.hasPaymentID {
 		req, err = h.client.NewRequestWithContext(ctx, http.MethodDelete,
@@ -99,13 +112,16 @@ func (h *CancelHandler) TryReversePayment(ctx context.Context) (ConfirmResponse,
 	}
 
 	if err != nil {
+		fmt.Println("TryReversePayment error:", err)
 		return ConfirmResponse{}, err
 	}
 
 	err = h.client.Send(req, &result)
 	if err != nil {
+		fmt.Println("TryReversePayment send error:", err)
 		return result, err
 	}
 
+	fmt.Println("TryReversePayment response:", result)
 	return result, nil
 }
