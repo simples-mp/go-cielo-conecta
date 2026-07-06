@@ -53,6 +53,8 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 	}
 
 	h.client.LogInfo("cancel payment request created", "method", req.Method, "url", req.URL.String())
+	h.client.LogInfo("request headers", "headers", req.Header)
+	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &voidResponse)
 	if err != nil {
@@ -77,6 +79,10 @@ func (h *CancelHandler) ConfirmCancel(ctx context.Context, voidID string) (Confi
 		h.client.LogError("failed to create confirm cancellation request", "void_id", voidID, "error", err)
 		return confirmResponse, err
 	}
+
+	h.client.LogInfo("confirm cancellation request created", "method", req.Method, "url", req.URL.String())
+	h.client.LogInfo("request headers", "headers", req.Header)
+	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &confirmResponse)
 	if err != nil {
