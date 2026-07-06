@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 )
-import . "github.com/edmfilho/go-cielo-conecta"
+import . "github.com/simples-mp/go-cielo-conecta"
 
 func TestNewClient(t *testing.T) {
 	merchant := Merchant{

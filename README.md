@@ -19,7 +19,7 @@ Golang lib to communicate with Cielo Conecta API.
 ### Installation
 
 ```shell
-go get github.com/edmfilho/go-cielo-conecta
+go get github.com/simples-mp/go-cielo-conecta
 ```
 
 ### New Client
