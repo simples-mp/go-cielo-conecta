@@ -51,8 +51,6 @@ func (c *Client) GetPaymentByID(ctx context.Context, paymentId string) (Sale, er
 	}
 
 	c.LogInfo("get payment by id request created", "method", req.Method, "url", req.URL.String())
-	c.LogInfo("request headers", "headers", req.Header)
-	c.LogInfo("request body", "body", req.Body)
 
 	err = c.Send(req, &sale)
 	if err != nil {
@@ -80,8 +78,6 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string, date .
 	}
 
 	c.LogInfo("get payment by order id request created", "method", req.Method, "url", req.URL.String())
-	c.LogInfo("request headers", "headers", req.Header)
-	c.LogInfo("request body", "body", req.Body)
 
 	err = c.Send(req, &sale)
 	if err != nil {

@@ -106,8 +106,6 @@ func (h *SaleHandler) Authorize(ctx context.Context) (Sale, error) {
 	}
 
 	h.client.LogInfo("sale request created", "method", req.Method, "url", req.URL.String())
-	h.client.LogInfo("request headers", "headers", req.Header)
-	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &created)
 	if err != nil {
@@ -146,8 +144,6 @@ func (h *SaleHandler) Confirm(ctx context.Context) (ConfirmResponse, error) {
 	}
 
 	h.client.LogInfo("confirm payment request created", "method", req.Method, "url", req.URL.String())
-	h.client.LogInfo("request headers", "headers", req.Header)
-	h.client.LogInfo("request body", "body", req.Body)
 
 	err = h.client.Send(req, &response)
 	if err != nil {

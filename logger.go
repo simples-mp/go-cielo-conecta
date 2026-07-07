@@ -1,13 +1,17 @@
 package go_cielo_conecta
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 )
 
-const maxLogSize = 1024 * 100 // 102KB
+const maxLogSize = 1024 * 256 // 256 KB
 
 type LogInfo struct {
 	URL        string `json:"url"`
@@ -19,12 +23,27 @@ type LogInfo struct {
 func (l LogInfo) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("status", l.Status),
+		slog.Int("status_code", l.StatusCode),
 		slog.String("method", l.Method),
 		slog.String("url", l.URL),
 	)
 }
 
-func (c *Client) logger(r *http.Request, resp *http.Response) {
+func (c *Client) logHTTPRequest(r *http.Request) {
+	if c.log == nil {
+		return
+	}
+
+	c.LogInfo(
+		"sending http request",
+		"method", r.Method,
+		"url", r.URL.String(),
+		"headers", redactedHeaders(r.Header),
+		"request_body", requestBodyLogValue(r),
+	)
+}
+
+func (c *Client) logger(r *http.Request, resp *http.Response, responseBody []byte) {
 	if c.log == nil {
 		return
 	}
@@ -37,39 +56,72 @@ func (c *Client) logger(r *http.Request, resp *http.Response) {
 	}
 
 	if l.StatusCode < 200 || l.StatusCode > 299 {
-		c.LogError("error executing the request", "info", l)
+		c.LogError("error executing the request", "info", l, "response_body", bodyLogValue(responseBody))
 		return
 	}
 
-	c.LogInfo("request was successful", "info", l)
+	c.LogInfo("request was successful", "info", l, "response_body", bodyLogValue(responseBody))
 }
 
-/* func readBody(r *http.Request, resp *http.Response) LogInfo {
-	l := LogInfo{
-		URL:        r.URL.String(),
-		Method:     r.Method,
-		Status:     resp.Status,
-		StatusCode: resp.StatusCode,
-		Body:       nil,
+func redactedHeaders(headers http.Header) http.Header {
+	clone := headers.Clone()
+	for _, key := range []string{"Authorization", "Proxy-Authorization"} {
+		if clone.Get(key) != "" {
+			clone.Set(key, "<redacted>")
+		}
 	}
 
-	if r.Method == http.MethodGet && resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		return l
+	return clone
+}
+
+func requestBodyLogValue(r *http.Request) any {
+	if r.Body == nil {
+		return nil
 	}
 
-	content, _ := io.ReadAll(resp.Body)
+	if r.GetBody != nil {
+		body, err := r.GetBody()
+		if err != nil {
+			return fmt.Sprintf("failed to read request body: %v", err)
+		}
+		defer body.Close()
 
-	if int64(len(content)) > maxLogSize {
-		resp.Body = io.NopCloser(bytes.NewBuffer(content))
-		return l
+		data, err := io.ReadAll(body)
+		if err != nil {
+			return fmt.Sprintf("failed to read request body: %v", err)
+		}
+
+		return bodyLogValue(data)
 	}
 
-	// Restore the original body for further processing
-	resp.Body = io.NopCloser(bytes.NewBuffer(content))
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		return fmt.Sprintf("failed to read request body: %v", err)
+	}
 
-	l.Body = content
-	return l
-} */
+	r.Body = io.NopCloser(bytes.NewReader(data))
+	return bodyLogValue(data)
+}
+
+func bodyLogValue(data []byte) any {
+	if len(data) == 0 {
+		return nil
+	}
+
+	if len(data) > maxLogSize {
+		return map[string]any{
+			"omitted": true,
+			"bytes":   len(data),
+			"limit":   maxLogSize,
+		}
+	}
+
+	if json.Valid(data) {
+		return json.RawMessage(data)
+	}
+
+	return string(data)
+}
 
 func (c *Client) SetLogger(logger *slog.Logger) {
 	if logger == nil {

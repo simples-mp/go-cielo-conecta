@@ -121,20 +121,23 @@ func (c *Client) Send(req *http.Request, v any) error {
 	req.Header.Set("User-Agent", "go-cielo-conecta-client/1.0")
 	req.Header.Set("Authorization", "Bearer "+c.token.AccessToken)
 
+	c.logHTTPRequest(req)
+
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
-	c.logger(req, resp)
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	c.logger(req, resp, data)
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("request failed, status=%3d, failed to decode body: %v", resp.StatusCode, err)
-		}
-
 		errCielo := MultiErr{}
 
 		err = json.Unmarshal(data, &errCielo)
@@ -145,5 +148,5 @@ func (c *Client) Send(req *http.Request, v any) error {
 		return fmt.Errorf("request failed, status=%d, body=%s", resp.StatusCode, string(data))
 	}
 
-	return json.NewDecoder(resp.Body).Decode(v)
+	return json.NewDecoder(bytes.NewReader(data)).Decode(v)
 }
