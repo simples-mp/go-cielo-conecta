@@ -1,29 +1,12 @@
 package go_cielo_conecta
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
-	"sync"
-	"time"
 )
 
 type (
-	Client struct {
-		sync.Mutex
-
-		Client *http.Client
-		env    Environment
-		token  *tokenResponse
-		log    *slog.Logger
-
-		cancel context.CancelFunc
-		wg     sync.WaitGroup
-		once   sync.Once
-	}
-
 	Environment struct {
 		OAuthURL     string
 		ParamsURL    string
@@ -31,12 +14,6 @@ type (
 		APIQueryUrl  string
 		Homologation bool
 		merchant     Merchant
-	}
-
-	tokenResponse struct {
-		AccessToken string        `json:"access_token"`
-		TokenType   string        `json:"token_type"`
-		ExpiresIn   time.Duration `json:"expires_in"`
 	}
 
 	Merchant struct {

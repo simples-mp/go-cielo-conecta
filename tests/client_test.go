@@ -3,8 +3,9 @@ package tests
 import (
 	"os"
 	"testing"
+
+	. "github.com/simples-mp/go-cielo-conecta"
 )
-import . "github.com/simples-mp/go-cielo-conecta"
 
 func TestNewClient(t *testing.T) {
 	merchant := Merchant{
@@ -20,8 +21,6 @@ func TestNewClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer client.Close()
-
 	t.Logf("Successfully got token: %v", client)
 }
 
@@ -31,15 +30,13 @@ func TestBinTables(t *testing.T) {
 		Secret: os.Getenv("MERCHANT_SECRET"),
 	}
 	if merchant.ID == "" || merchant.Secret == "" {
-		t.Skip("MERCHANT_ID and MERCHANT_SECRET are required for this integration test")
+		t.Fatal("MERCHANT_ID and MERCHANT_SECRET are required for this integration test")
 	}
 
 	client, err := NewClient(HmlEnv.WithMerchant(merchant))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	defer client.Close()
 
 	data, err := client.SharedLibrary("00000001")
 	if err != nil {
