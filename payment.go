@@ -8,9 +8,10 @@ import (
 )
 
 type SaleInfo struct {
-	OrderID   string
-	Amount    uint32 // Amount in BRL cents. e.g., for R$ 10.50, Amount should be 1050.
-	ProductID uint
+	MerchantOrderID string // Unique identifier for the order. Default is a numeric string of the current timestamp in milliseconds if not provided.
+	Amount          uint32 // Amount in BRL cents. e.g., for R$ 10.50, Amount should be 1050.
+	ProductID       uint
+	SoftDescriptor   string // Optional. A string that will appear on the cardholder's statement. Max length is 13 characters.
 }
 
 // CreateSale initializes a new payment with the provided order ID, amount (in cents), and product ID.
@@ -26,11 +27,12 @@ func (c *Client) CreateSale(info SaleInfo) SaleInterface {
 		PaymentDateTime:        time.Now().Format("2006-01-02T15:04:05"),
 		Amount:                 info.Amount,
 		ProductId:              info.ProductID,
+		SoftDescriptor:         info.SoftDescriptor,
 		SubordinatedMerchantId: c.env.merchant.ID,
 	}
 
 	s := Sale{
-		MerchantOrderId: info.OrderID,
+		MerchantOrderId: info.MerchantOrderID,
 		Payment:         p,
 	}
 
@@ -62,14 +64,10 @@ func (c *Client) GetPaymentByID(ctx context.Context, paymentId string) (Sale, er
 	return sale, nil
 }
 
-func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string, date ...time.Time) (Sale, error) {
+func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string) (Sale, error) {
 	url := fmt.Sprintf("%s/1/physicalSales/MerchantOrderId/%s", c.env.APIQueryUrl, orderID)
 
 	var sale []Sale
-
-	if len(date) > 0 {
-		url = fmt.Sprintf("%s?transactionDate=%s", url, date[0].Format("2006/01/02"))
-	}
 
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

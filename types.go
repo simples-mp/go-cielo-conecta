@@ -168,6 +168,11 @@ type (
 		TerminalID              string                  `json:",omitempty"`
 	}
 
+	ConfirmRequest struct {
+		EmvData             string `json:"EmvData"`
+		IssuerScriptResults string `json:"IssuerScriptResults,omitempty"`
+	}
+
 	ConfirmResponse struct {
 		CancellationStatus CancellationStatus `json:"CancellationStatus,omitempty"`
 		ConfirmationStatus ConfirmationStatus `json:"ConfirmationStatus,omitempty"`
