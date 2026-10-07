@@ -2,7 +2,6 @@ package go_cielo_conecta
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 )
 
@@ -173,6 +172,13 @@ type (
 		IssuerScriptResults string `json:"IssuerScriptResults,omitempty"`
 	}
 
+	ReverseRequest struct {
+		PaymentID           string `json:"-"`
+		MerchantOrderId     string `json:"-"`
+		EmvData             string `json:"EmvData"`
+		IssuerScriptResults string `json:"IssuerScriptResults,omitempty"`
+	}
+
 	ConfirmResponse struct {
 		CancellationStatus CancellationStatus `json:"CancellationStatus,omitempty"`
 		ConfirmationStatus ConfirmationStatus `json:"ConfirmationStatus,omitempty"`
@@ -184,9 +190,14 @@ type (
 	}
 
 	Void struct {
+		PaymentID string
+		CardVoid  VoidCard
+	}
+
+	VoidRequest struct {
 		MerchantVoidId   string   `json:"MerchantVoidId"`
 		MerchantVoidDate string   `json:"MerchantVoidDate"`
-		Card             CardVoid `json:"Card"`
+		Card             VoidCard `json:"Card"`
 	}
 
 	VoidResponse struct {
@@ -206,19 +217,12 @@ type (
 		Links                     []*Link            `json:"Links,omitempty"`
 	}
 
-	CardVoid struct {
+	VoidCard struct {
 		InputMode         InputMode         `json:"InputMode"`
 		EmvData           string            `json:"EmvData"`
 		TrackOneData      string            `json:"TrackOneData,omitempty"`
 		TrackTwoData      string            `json:"TrackTwoData"`
 		EncryptedCardData EncryptedCardData `json:"EncryptedCardData"`
-	}
-
-	CancelRequest struct {
-		PaymentID       string
-		MerchantOrderId string
-		EmvData         string
-		CardVoid        CardVoid
 	}
 )
 type (
@@ -258,35 +262,9 @@ func (e Environment) WithMerchant(m Merchant) Environment {
 	return e
 }
 
-func (s Sale) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("order_id", s.MerchantOrderId),
-		slog.Any("payment", s.Payment),
-	)
-}
-
-func (c ConfirmResponse) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("return_message", c.ReturnMessage),
-		slog.String("status", c.Status.String()),
-		slog.String("confirmation_status", c.ConfirmationStatus.String()),
-		slog.Uint64("reason_code", uint64(c.ReasonCode)),
-	)
-}
-
-func (p Payment) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("payment_id", p.ID),
-		slog.String("status", p.Status.String()),
-		slog.String("confirmation_status", p.ConfirmationStatus.String()),
-		slog.String("return_message", p.ReturnMessage),
-		slog.String("extended_message", p.ExtendedMessage),
-	)
-}
-
-func (p *Payment) toCardVoid() CardVoid {
+func (p *Payment) toCardVoid() VoidCard {
 	if p.CreditCard != nil {
-		return CardVoid{
+		return VoidCard{
 			InputMode:         p.CreditCard.InputMode,
 			EmvData:           p.CreditCard.EmvData,
 			TrackOneData:      p.CreditCard.TrackOneData,
@@ -295,7 +273,7 @@ func (p *Payment) toCardVoid() CardVoid {
 		}
 	}
 
-	return CardVoid{
+	return VoidCard{
 		InputMode:         p.DebitCard.InputMode,
 		EmvData:           p.DebitCard.EmvData,
 		TrackOneData:      p.DebitCard.TrackOneData,
@@ -305,11 +283,13 @@ func (p *Payment) toCardVoid() CardVoid {
 }
 
 func (s *Sale) IsReversible() bool {
-	return s.Payment.Status == StatusPaymentConfirmed && s.Payment.ConfirmationStatus != ConfirmationStatusConfirmed
+	return s.Payment.Status == StatusPaymentConfirmed &&
+		s.Payment.ConfirmationStatus != ConfirmationStatusConfirmed
 }
 
 func (s *Sale) IsCancellable() bool {
-	return s.Payment.Status == StatusPaymentConfirmed && s.Payment.ConfirmationStatus == ConfirmationStatusConfirmed
+	return s.Payment.Status == StatusPaymentConfirmed &&
+		s.Payment.ConfirmationStatus == ConfirmationStatusConfirmed
 }
 
 func (p *Payment) getEmvData() string {

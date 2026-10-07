@@ -11,7 +11,7 @@ type SaleInfo struct {
 	MerchantOrderID string // Unique identifier for the order. Default is a numeric string of the current timestamp in milliseconds if not provided.
 	Amount          uint32 // Amount in BRL cents. e.g., for R$ 10.50, Amount should be 1050.
 	ProductID       uint
-	SoftDescriptor   string // Optional. A string that will appear on the cardholder's statement. Max length is 13 characters.
+	SoftDescriptor  string // Optional. A string that will appear on the cardholder's statement. Max length is 13 characters.
 }
 
 // CreateSale initializes a new payment with the provided order ID, amount (in cents), and product ID.
@@ -92,47 +92,33 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string) (Sale,
 	return Sale{}, nil
 }
 
-func (c *Client) ReversePayment(ctx context.Context, sale Sale) (ConfirmResponse, error) {
-	cancel := newCancelHandler(c, CancelRequest{
-		PaymentID:       sale.Payment.ID,
-		MerchantOrderId: sale.MerchantOrderId,
-		EmvData:         sale.Payment.getEmvData(),
-	})
+func (c *Client) ReversePayment(ctx context.Context, reverseInfo ReverseRequest) (ConfirmResponse, error) {
+	var (
+		url    string
+		result ConfirmResponse
+	)
 
-	c.LogInfo("reversing payment", "sale", sale)
-	return cancel.TryReversePayment(ctx)
-}
+	if reverseInfo.PaymentID != "" {
+		url = fmt.Sprintf("%s/1/physicalSales/%s", c.env.APIUrl, reverseInfo.PaymentID)
+	} else {
+		url = fmt.Sprintf("%s/1/physicalSales/orderId/%s", c.env.APIUrl, reverseInfo.MerchantOrderId)
+	}
 
-func (c *Client) CancelPayment(ctx context.Context, sale Sale, merchantVoidId string) (ConfirmResponse, error) {
-	cancel := newCancelHandler(c, CancelRequest{
-		PaymentID:       sale.Payment.ID,
-		MerchantOrderId: sale.MerchantOrderId,
-		CardVoid:        sale.Payment.toCardVoid(),
-	})
+	c.LogInfo("reversing payment", "merchant_order_id", reverseInfo.MerchantOrderId)
 
-	var confirmResponse ConfirmResponse
-	c.LogInfo("canceling payment", "sale", sale)
-
-	voidResponse, err := cancel.CancelPayment(ctx, merchantVoidId)
+	req, err := c.NewRequestWithContext(ctx, http.MethodDelete, url, reverseInfo)
 	if err != nil {
-		c.LogError("failed to cancel payment", "sale", sale, "error", err)
-		return confirmResponse, err
+		c.LogError("failed to create reverse payment request", "body", reverseInfo, "error", err)
+		return ConfirmResponse{}, err
+	}
+	c.LogInfo("reverse payment request created", "method", req.Method, "url", req.URL.String())
+
+	err = c.Send(req, &result)
+	if err != nil {
+		c.LogError("failed to send reverse payment request", "body", reverseInfo, "error", err)
+		return ConfirmResponse{}, err
 	}
 
-	confirmResponse = ConfirmResponse{
-		CancellationStatus: voidResponse.CancellationStatus,
-		Status:             voidResponse.Status,
-		ReturnMessage:      voidResponse.ExtendedMessage,
-		ConfirmationStatus: voidResponse.ConfirmationStatus,
-	}
-
-	c.LogInfo("payment cancellation response received", "void_response", voidResponse)
-
-	if voidResponse.CancellationStatus != CancellationStatusAuthorized {
-		c.LogError("payment cancellation status not authorized", "cancellation_status", voidResponse.CancellationStatus)
-		return confirmResponse, ErrCancellationStatusNotAuthorized
-	}
-
-	c.LogInfo("confirming payment cancellation", "void_id", voidResponse.VoidId)
-	return cancel.ConfirmCancel(ctx, voidResponse.VoidId)
+	c.LogInfo("reverse payment response received", "confirm_response", result)
+	return result, nil
 }

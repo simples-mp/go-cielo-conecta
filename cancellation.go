@@ -7,38 +7,36 @@ import (
 	"time"
 )
 
-type CancelInterface interface {
-	TryReversePayment(ctx context.Context) (ConfirmResponse, error)
-	CancelPayment(ctx context.Context, merchantVoidId string) (VoidResponse, error)
-	ConfirmCancel(ctx context.Context, voidID string) (ConfirmResponse, error)
+type VoidInterface interface {
+	CancelPayment(ctx context.Context, merchantVoidId string, merchantVoidDate time.Time) (VoidResponse, error)
+	ConfirmCancel(ctx context.Context, merchantVoidId string) (ConfirmResponse, error)
 }
 
-type CancelHandler struct {
-	client       *Client
-	info         CancelRequest
-	hasPaymentID bool
+type VoidHandler struct {
+	client *Client
+	info   Void
 }
 
-func newCancelHandler(c *Client, request CancelRequest) CancelInterface {
-	hasPaymentID := false
-
-	if request.PaymentID != "" {
-		hasPaymentID = true
-	}
-
-	return &CancelHandler{
-		client:       c,
-		info:         request,
-		hasPaymentID: hasPaymentID,
+func NewVoidInformation(paymentID string, cardVoid VoidCard) Void {
+	return Void{
+		PaymentID:       paymentID,
+		CardVoid:        cardVoid,
 	}
 }
 
-func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string) (VoidResponse, error) {
+func NewVoidHandler(c *Client, voidInfo Void) VoidInterface {
+	return &VoidHandler{
+		client: c,
+		info:   voidInfo,
+	}
+}
+
+func (h *VoidHandler) CancelPayment(ctx context.Context, merchantVoidId string, merchantVoidDate time.Time) (VoidResponse, error) {
 	var voidResponse = VoidResponse{}
 
-	body := Void{
+	body := VoidRequest{
 		MerchantVoidId:   merchantVoidId,
-		MerchantVoidDate: time.Now().Format("2006-01-02T15:04:05"),
+		MerchantVoidDate: merchantVoidDate.Format("2006-01-02T15:04:05"),
 		Card:             h.info.CardVoid,
 	}
 
@@ -64,7 +62,7 @@ func (h *CancelHandler) CancelPayment(ctx context.Context, merchantVoidId string
 	return voidResponse, nil
 }
 
-func (h *CancelHandler) ConfirmCancel(ctx context.Context, voidID string) (ConfirmResponse, error) {
+func (h *VoidHandler) ConfirmCancel(ctx context.Context, voidID string) (ConfirmResponse, error) {
 	var confirmResponse = ConfirmResponse{}
 
 	h.client.LogInfo("confirming cancellation", "void_id", voidID)
@@ -88,42 +86,4 @@ func (h *CancelHandler) ConfirmCancel(ctx context.Context, voidID string) (Confi
 
 	h.client.LogInfo("confirm cancellation response received", "confirm_response", confirmResponse)
 	return confirmResponse, nil
-}
-
-func (h *CancelHandler) TryReversePayment(ctx context.Context) (ConfirmResponse, error) {
-	var (
-		result ConfirmResponse
-		req    *http.Request
-		err    error
-	)
-
-	body := map[string]string{"EmvData": h.info.EmvData}
-
-	h.client.LogInfo("reverse payment request body created", "body", body)
-
-	if h.hasPaymentID {
-		req, err = h.client.NewRequestWithContext(ctx, http.MethodDelete,
-			fmt.Sprintf("%s/1/physicalSales/%s", h.client.env.APIUrl, h.info.PaymentID),
-			body,
-		)
-	} else {
-		req, err = h.client.NewRequestWithContext(ctx, http.MethodDelete,
-			fmt.Sprintf("%s/1/physicalSales/MerchantOrderId/%s", h.client.env.APIUrl, h.info.MerchantOrderId),
-			body,
-		)
-	}
-
-	if err != nil {
-		h.client.LogError("failed to create reverse payment request", "error", err)
-		return ConfirmResponse{}, err
-	}
-
-	err = h.client.Send(req, &result)
-	if err != nil {
-		h.client.LogError("failed to send reverse payment request", "error", err)
-		return result, err
-	}
-
-	h.client.LogInfo("reverse payment response received", "confirm_response", result)
-	return result, nil
 }

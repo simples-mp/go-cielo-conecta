@@ -52,6 +52,32 @@ func (l LogInfo) LogValue() slog.Value {
 	)
 }
 
+func (s Sale) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("order_id", s.MerchantOrderId),
+		slog.Any("payment", s.Payment),
+	)
+}
+
+func (c ConfirmResponse) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("return_message", c.ReturnMessage),
+		slog.String("status", c.Status.String()),
+		slog.String("confirmation_status", c.ConfirmationStatus.String()),
+		slog.Uint64("reason_code", uint64(c.ReasonCode)),
+	)
+}
+
+func (p Payment) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("payment_id", p.ID),
+		slog.String("status", p.Status.String()),
+		slog.String("confirmation_status", p.ConfirmationStatus.String()),
+		slog.String("return_message", p.ReturnMessage),
+		slog.String("extended_message", p.ExtendedMessage),
+	)
+}
+
 func (c *Client) logHTTPRequest(r *http.Request) {
 	if c.log == nil {
 		return
