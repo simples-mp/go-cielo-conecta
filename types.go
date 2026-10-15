@@ -28,27 +28,13 @@ type (
 	MultiErr []ErrCielo
 
 	Sale struct {
-		MerchantOrderId string    `json:"MerchantOrderId"`
-		Customer        *Customer `json:"Customer,omitempty"`
-		Payment         Payment   `json:"Payment"`
-	}
-
-	Customer struct {
-		Name            string       `json:",omitempty"`
-		Identity        string       `json:",omitempty"`
-		IdentityType    IdentityType `json:",omitempty"`
-		Email           string       `json:",omitempty"`
-		Birthday        string       `json:",omitempty"`
-		Address         *Address     `json:",omitempty"`
-		DeliveryAddress *Address     `json:",omitempty"`
-	}
-
-	Address struct {
-		Street, Number, Complement, City, State, ZipCode, Country string `json:",omitempty"`
+		MerchantOrderId string  `json:"MerchantOrderId"`
+		Payment         Payment `json:"Payment"`
 	}
 
 	Payment struct {
 		ID                        string                `json:"PaymentId,omitempty"`
+		SubordinatedMerchantId    string                `json:",omitempty"`
 		Installments              int                   `json:",omitempty"` // Installments Quantidade de parcelas: varia de 2 a 99 para transação de financiamento.
 		Type                      string                `json:",omitempty"`
 		Interest                  Interest              `json:",omitempty"`
@@ -82,7 +68,6 @@ type (
 		InitializationVersion     int64                 `json:",omitempty"`
 		ConfirmationStatus        ConfirmationStatus    `json:",omitempty"`
 		EmvResponseData           string                `json:",omitempty"`
-		SubordinatedMerchantId    string                `json:",omitempty"`
 		OfflinePaymentType        string                `json:",omitempty"`
 		MerchantAcquirerId        string                `json:",omitempty"`
 		TerminalAcquirerId        string                `json:",omitempty"`
@@ -104,20 +89,20 @@ type (
 		InputMode                      InputMode            `json:",omitempty"`
 		ExpirationDate                 string               `json:",omitempty"`
 		AuthenticationMethod           AuthenticationMethod `json:",omitempty"`
-		IssuerId                       int                  `json:",omitempty"`
-		BrandId                        int                  `json:",omitempty"`
+		IssuerId                       uint                 `json:",omitempty"`
+		BrandId                        uint                 `json:",omitempty"`
+		TruncateCardNumberWhenPrinting bool                 `json:",omitempty"`
+		PanSequenceNumber              uint                 `json:",omitempty"`
+		SaveCard                       bool                 `json:",omitempty"`
+		EmvData                        string               `json:",omitempty"`
 		TrackOneData                   string               `json:",omitempty"`
 		TrackTwoData                   string               `json:",omitempty"`
-		EmvData                        string               `json:",omitempty"`
 		EncryptedCardData              EncryptedCardData    `json:",omitempty"`
-		SecurityCodeStatus             SecurityCodeStatus   `json:",omitempty"`
-		SecurityCode                   string               `json:",omitempty"`
-		TruncateCardNumberWhenPrinting bool                 `json:",omitempty"`
-		SaveCard                       bool                 `json:",omitempty"`
-		PanSequenceNumber              uint                 `json:",omitempty"`
+		PinBlock                       PinBlock             `json:",omitempty"`
 		IsFallback                     bool                 `json:",omitempty"`
 		BrandInformation               BrandInformation     `json:",omitempty"`
-		PinBlock                       PinBlock             `json:",omitempty"`
+		SecurityCodeStatus             SecurityCodeStatus   `json:",omitempty"`
+		SecurityCode                   string               `json:",omitempty"`
 	}
 
 	DebitCard struct {
@@ -135,7 +120,6 @@ type (
 		EncryptedCardData              EncryptedCardData    `json:",omitempty"`
 		PinBlock                       PinBlock             `json:",omitempty"`
 		IsFallback                     bool                 `json:",omitempty"`
-		CardToken                      string               `json:",omitempty"`
 		BrandInformation               BrandInformation     `json:",omitempty"`
 		SecurityCodeStatus             SecurityCodeStatus   `json:",omitempty"`
 		SecurityCode                   string               `json:",omitempty"`
@@ -244,7 +228,7 @@ type (
 	CancellationStatus uint
 )
 
-func (er ErrCielo) Error() string {
+func (er *ErrCielo) Error() string {
 	return fmt.Sprintf("cielo_code=%d, message=%s, err_cielo=%v", er.Code, er.Message, er.Err)
 }
 
@@ -262,26 +246,6 @@ func (e Environment) WithMerchant(m Merchant) Environment {
 	return e
 }
 
-func (p *Payment) toCardVoid() VoidCard {
-	if p.CreditCard != nil {
-		return VoidCard{
-			InputMode:         p.CreditCard.InputMode,
-			EmvData:           p.CreditCard.EmvData,
-			TrackOneData:      p.CreditCard.TrackOneData,
-			TrackTwoData:      p.CreditCard.TrackTwoData,
-			EncryptedCardData: p.CreditCard.EncryptedCardData,
-		}
-	}
-
-	return VoidCard{
-		InputMode:         p.DebitCard.InputMode,
-		EmvData:           p.DebitCard.EmvData,
-		TrackOneData:      p.DebitCard.TrackOneData,
-		TrackTwoData:      p.DebitCard.TrackTwoData,
-		EncryptedCardData: p.DebitCard.EncryptedCardData,
-	}
-}
-
 func (s *Sale) IsReversible() bool {
 	return s.Payment.Status == StatusPaymentConfirmed &&
 		s.Payment.ConfirmationStatus != ConfirmationStatusConfirmed
@@ -290,16 +254,4 @@ func (s *Sale) IsReversible() bool {
 func (s *Sale) IsCancellable() bool {
 	return s.Payment.Status == StatusPaymentConfirmed &&
 		s.Payment.ConfirmationStatus == ConfirmationStatusConfirmed
-}
-
-func (p *Payment) getEmvData() string {
-	if p.CreditCard != nil {
-		return p.CreditCard.EmvData
-	}
-
-	if p.DebitCard != nil {
-		return p.DebitCard.EmvData
-	}
-
-	return ""
 }

@@ -10,18 +10,12 @@ import (
 type VoidInterface interface {
 	CancelPayment(ctx context.Context, merchantVoidId string, merchantVoidDate time.Time) (VoidResponse, error)
 	ConfirmCancel(ctx context.Context, merchantVoidId string) (ConfirmResponse, error)
+	GetCancel(ctx context.Context, merchantVoidId string) (VoidResponse, error)
 }
 
 type VoidHandler struct {
 	client *Client
 	info   Void
-}
-
-func NewVoidInformation(paymentID string, cardVoid VoidCard) Void {
-	return Void{
-		PaymentID:       paymentID,
-		CardVoid:        cardVoid,
-	}
 }
 
 func NewVoidHandler(c *Client, voidInfo Void) VoidInterface {
@@ -86,4 +80,30 @@ func (h *VoidHandler) ConfirmCancel(ctx context.Context, voidID string) (Confirm
 
 	h.client.LogInfo("confirm cancellation response received", "confirm_response", confirmResponse)
 	return confirmResponse, nil
+}
+
+func (h *VoidHandler) GetCancel(ctx context.Context, voidID string) (VoidResponse, error) {
+	var voidResponse = VoidResponse{}
+
+	h.client.LogInfo("getting cancellation details", "void_id", voidID)
+
+	req, err := h.client.NewRequestWithContext(ctx, http.MethodGet,
+		fmt.Sprintf("%s/1/physicalSales/%s/voids/%s", h.client.env.APIUrl, h.info.PaymentID, voidID),
+		nil,
+	)
+	if err != nil {
+		h.client.LogError("failed to create get cancellation request", "void_id", voidID, "error", err)
+		return voidResponse, err
+	}
+
+	h.client.LogInfo("get cancellation request created", "method", req.Method, "url", req.URL.String())
+
+	err = h.client.Send(req, &voidResponse)
+	if err != nil {
+		h.client.LogError("failed to send get cancellation request", "void_id", voidID, "error", err)
+		return voidResponse, err
+	}
+
+	h.client.LogInfo("get cancellation response received", "void_response", voidResponse)
+	return voidResponse, nil
 }

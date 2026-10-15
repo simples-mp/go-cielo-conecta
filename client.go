@@ -46,9 +46,10 @@ type ClientInterface interface {
 	CreateSale(info SaleInfo) SaleInterface
 
 	GetPaymentByID(ctx context.Context, paymentId string) (Sale, error)
-	GetPaymentByOrderID(ctx context.Context, orderID string, date ...time.Time) (Sale, error)
-	ReversePayment(ctx context.Context, sale Sale) (ConfirmResponse, error)
-	CancelPayment(ctx context.Context, sale Sale, merchantVoidId string) (ConfirmResponse, error)
+	GetPaymentByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (Sale, error)
+	ReversePayment(ctx context.Context, reverseInfo ReverseRequest) (ConfirmResponse, error)
+
+	CreateVoidHandler(paymentID string, cardVoid VoidCard) VoidInterface
 
 	SharedLibrary(terminalID string, subMerchantId ...string) (map[string]any, error)
 
@@ -177,6 +178,13 @@ func (c *Client) Send(req *http.Request, v any) error {
 	}
 
 	return nil
+}
+
+func (c *Client) CreateVoidHandler(paymentID string, cardVoid VoidCard) VoidInterface {
+	return NewVoidHandler(c, Void{
+		PaymentID: paymentID,
+		CardVoid:  cardVoid,
+	})
 }
 
 func readResponseBody(body io.Reader) ([]byte, error) {

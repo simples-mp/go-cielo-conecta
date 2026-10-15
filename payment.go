@@ -64,14 +64,18 @@ func (c *Client) GetPaymentByID(ctx context.Context, paymentId string) (Sale, er
 	return sale, nil
 }
 
-func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string) (Sale, error) {
-	url := fmt.Sprintf("%s/1/physicalSales/MerchantOrderId/%s", c.env.APIQueryUrl, orderID)
+func (c *Client) GetPaymentByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (Sale, error) {
+	url := fmt.Sprintf("%s/1/physicalSales/MerchantOrderId/%s", c.env.APIQueryUrl, merchantOrderID)
 
 	var sale []Sale
 
+	if len(paymentDateTime) > 0 {
+		url = fmt.Sprintf("%s?transactionDate=%s", url, paymentDateTime[0].Format("2006/01/02"))
+	}
+
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		c.LogError("failed to create get payment by order id request", "order_id", orderID, "error", err)
+		c.LogError("failed to create get payment by order id request", "order_id", merchantOrderID, "error", err)
 		return Sale{}, err
 	}
 
@@ -79,7 +83,7 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string) (Sale,
 
 	err = c.Send(req, &sale)
 	if err != nil {
-		c.LogError("failed to send get payment by order id request", "order_id", orderID, "error", err)
+		c.LogError("failed to send get payment by order id request", "order_id", merchantOrderID, "error", err)
 		return Sale{}, err
 	}
 
@@ -88,7 +92,7 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, orderID string) (Sale,
 		return sale[0], nil
 	}
 
-	c.LogInfo("payment by order id response received with no sales", "order_id", orderID)
+	c.LogInfo("payment by order id response received with no sales", "order_id", merchantOrderID)
 	return Sale{}, nil
 }
 
