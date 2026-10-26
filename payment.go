@@ -2,6 +2,7 @@ package go_cielo_conecta
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -41,30 +42,35 @@ func (c *Client) CreateSale(info SaleInfo) SaleInterface {
 	return &SaleHandler{client: c, Sale: s}
 }
 
-func (c *Client) GetPaymentByID(ctx context.Context, paymentId string) (Sale, error) {
-	var sale Sale
+func (c *Client) GetSaleByID(ctx context.Context, paymentId string) (SaleInterface, error) {
+	var saleHandler SaleHandler
 
-	c.LogInfo("getting payment by id", "payment_id", paymentId)
+	c.LogInfo("getting sale by id", "payment_id", paymentId)
 
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/1/physicalSales/%s", c.env.APIQueryUrl, paymentId), nil)
 	if err != nil {
-		c.LogError("failed to create get payment by id request", "payment_id", paymentId, "error", err)
-		return sale, err
+		c.LogError("failed to create get sale by id request", "payment_id", paymentId, "error", err)
+		return nil, err
 	}
 
-	c.LogInfo("get payment by id request created", "method", req.Method, "url", req.URL.String())
+	c.LogInfo("get sale by id request created", "method", req.Method, "url", req.URL.String())
 
-	err = c.Send(req, &sale)
+	err = c.Send(req, &saleHandler.Sale)
 	if err != nil {
-		c.LogError("failed to send get payment by id request", "payment_id", paymentId, "error", err)
-		return sale, err
+		c.LogError("failed to send get sale by id request", "payment_id", paymentId, "error", err)
+		return nil, err
 	}
 
-	c.LogInfo("payment by id response received", "sale", sale)
-	return sale, nil
+	if saleHandler.Sale.Payment.ID == "" {
+		c.LogInfo("sale by id response received with no sale", "payment_id", paymentId)
+		return nil, fmt.Errorf("no sale found for payment id: %s", paymentId)
+	}
+
+	c.LogInfo("sale by id response received", "sale", saleHandler.Sale)
+	return &saleHandler, nil
 }
 
-func (c *Client) GetPaymentByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (Sale, error) {
+func (c *Client) GetSaleByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (SaleInterface, error) {
 	url := fmt.Sprintf("%s/1/physicalSales/MerchantOrderId/%s", c.env.APIQueryUrl, merchantOrderID)
 
 	var sale []Sale
@@ -76,7 +82,7 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, merchantOrderID string
 	req, err := c.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		c.LogError("failed to create get payment by order id request", "order_id", merchantOrderID, "error", err)
-		return Sale{}, err
+		return nil, err
 	}
 
 	c.LogInfo("get payment by order id request created", "method", req.Method, "url", req.URL.String())
@@ -84,16 +90,17 @@ func (c *Client) GetPaymentByOrderID(ctx context.Context, merchantOrderID string
 	err = c.Send(req, &sale)
 	if err != nil {
 		c.LogError("failed to send get payment by order id request", "order_id", merchantOrderID, "error", err)
-		return Sale{}, err
+		return nil, err
 	}
 
 	if len(sale) > 0 {
 		c.LogInfo("payment by order id response received", "sale", sale[0])
-		return sale[0], nil
+
+		return &SaleHandler{Sale: sale[0], client: c}, nil
 	}
 
 	c.LogInfo("payment by order id response received with no sales", "order_id", merchantOrderID)
-	return Sale{}, nil
+	return nil, errors.New("no sale found for merchant order id: " + merchantOrderID)
 }
 
 func (c *Client) ReversePayment(ctx context.Context, reverseInfo ReverseRequest) (ConfirmResponse, error) {

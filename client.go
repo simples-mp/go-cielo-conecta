@@ -45,8 +45,8 @@ type ClientInterface interface {
 
 	CreateSale(info SaleInfo) SaleInterface
 
-	GetPaymentByID(ctx context.Context, paymentId string) (Sale, error)
-	GetPaymentByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (Sale, error)
+	GetSaleByID(ctx context.Context, paymentId string) (SaleInterface, error)
+	GetSaleByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (SaleInterface, error)
 	ReversePayment(ctx context.Context, reverseInfo ReverseRequest) (ConfirmResponse, error)
 
 	CreateVoidHandler(paymentID string, cardVoid VoidCard) VoidInterface

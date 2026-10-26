@@ -233,12 +233,13 @@ func (er *ErrCielo) Error() string {
 }
 
 func (me MultiErr) Error() string {
-	var errStr strings.Builder
-	for _, er := range me {
-		errStr.WriteString(er.Error())
-		errStr.WriteString("\n")
+	var sb strings.Builder
+	for _, e := range me {
+		sb.WriteString(e.Error())
+		sb.WriteString("; ")
 	}
-	return errStr.String()
+
+	return sb.String()
 }
 
 func (e Environment) WithMerchant(m Merchant) Environment {
