@@ -43,7 +43,7 @@ func (c *Client) CreateSale(info SaleInfo) SaleInterface {
 }
 
 func (c *Client) GetSaleByID(ctx context.Context, paymentId string) (SaleInterface, error) {
-	var saleHandler SaleHandler
+	var sale Sale
 
 	c.LogInfo("getting sale by id", "payment_id", paymentId)
 
@@ -55,19 +55,19 @@ func (c *Client) GetSaleByID(ctx context.Context, paymentId string) (SaleInterfa
 
 	c.LogInfo("get sale by id request created", "method", req.Method, "url", req.URL.String())
 
-	err = c.Send(req, &saleHandler.Sale)
+	err = c.Send(req, &sale)
 	if err != nil {
 		c.LogError("failed to send get sale by id request", "payment_id", paymentId, "error", err)
 		return nil, err
 	}
 
-	if saleHandler.Sale.Payment.ID == "" {
+	if 	sale.Payment.ID == "" {
 		c.LogInfo("sale by id response received with no sale", "payment_id", paymentId)
 		return nil, fmt.Errorf("no sale found for payment id: %s", paymentId)
 	}
 
-	c.LogInfo("sale by id response received", "sale", saleHandler.Sale)
-	return &saleHandler, nil
+	c.LogInfo("sale by id response received", "sale", sale)
+	return &SaleHandler{Sale: sale, client: c}, nil
 }
 
 func (c *Client) GetSaleByOrderID(ctx context.Context, merchantOrderID string, paymentDateTime ...time.Time) (SaleInterface, error) {
