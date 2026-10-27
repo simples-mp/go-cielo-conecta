@@ -7,7 +7,7 @@ import (
 )
 
 func (e EncryptionType) String() string {
-	return [...]string{"DukptDes", "MasterKey", "Dukpt3Des", "Dukpt3DesCBC"}[e-1]
+	return [...]string{"None","DukptDes", "MasterKey", "Dukpt3Des", "Dukpt3DesCBC"}[e]
 }
 
 func ParseEncryptionType(s string) (EncryptionType, error) {
