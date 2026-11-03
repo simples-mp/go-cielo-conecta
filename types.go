@@ -160,7 +160,7 @@ type (
 		PaymentID           string `json:"-"`
 		MerchantOrderId     string `json:"-"`
 		EmvData             string `json:"EmvData"`
-		IssuerScriptResults string `json:"IssuerScriptResults,omitempty"`
+		IssuerScriptResults string `json:"IssuerScriptResults"`
 	}
 
 	ConfirmResponse struct {

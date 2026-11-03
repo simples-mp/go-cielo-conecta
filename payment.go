@@ -61,7 +61,7 @@ func (c *Client) GetSaleByID(ctx context.Context, paymentId string) (SaleInterfa
 		return nil, err
 	}
 
-	if 	sale.Payment.ID == "" {
+	if sale.Payment.ID == "" {
 		c.LogInfo("sale by id response received with no sale", "payment_id", paymentId)
 		return nil, fmt.Errorf("no sale found for payment id: %s", paymentId)
 	}
@@ -109,13 +109,17 @@ func (c *Client) ReversePayment(ctx context.Context, reverseInfo ReverseRequest)
 		result ConfirmResponse
 	)
 
+	if reverseInfo.PaymentID == "" && reverseInfo.MerchantOrderId == "" {
+		return ConfirmResponse{}, errors.New("either PaymentID or MerchantOrderId must be provided")
+	}
+
 	if reverseInfo.PaymentID != "" {
 		url = fmt.Sprintf("%s/1/physicalSales/%s", c.env.APIUrl, reverseInfo.PaymentID)
 	} else {
 		url = fmt.Sprintf("%s/1/physicalSales/orderId/%s", c.env.APIUrl, reverseInfo.MerchantOrderId)
 	}
 
-	c.LogInfo("reversing payment", "merchant_order_id", reverseInfo.MerchantOrderId)
+	c.LogInfo("reversing payment", "payment_id", reverseInfo.PaymentID, "merchant_order_id", reverseInfo.MerchantOrderId)
 
 	req, err := c.NewRequestWithContext(ctx, http.MethodDelete, url, reverseInfo)
 	if err != nil {
