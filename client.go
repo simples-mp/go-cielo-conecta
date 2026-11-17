@@ -20,7 +20,7 @@ const (
 )
 
 type Client struct {
-	Client *http.Client
+	http *http.Client
 
 	env   Environment
 	token *tokenResponse
@@ -28,6 +28,12 @@ type Client struct {
 
 	tokenMu     sync.Mutex
 	logPayloads atomic.Bool
+}
+
+type ClientOptions struct {
+	HTTPClient  *http.Client
+	Logger      *slog.Logger
+	LogPayloads bool
 }
 
 type tokenResponse struct {
@@ -54,25 +60,33 @@ type ClientInterface interface {
 	SharedLibrary(terminalID string, subMerchantId ...string) (map[string]any, error)
 
 	SetLogger(slog *slog.Logger)
+	SetPayloadLogging(logPayloads bool)
 }
 
 // NewClient creates a client and retrieves its initial access token.
 // If token retrieval succeeds, it returns the initialized client.
-func NewClient(env Environment, log ...*slog.Logger) (ClientInterface, error) {
+func NewClient(env Environment, options ...ClientOptions) (ClientInterface, error) {
 	if env.merchant.ID == "" || env.merchant.Secret == "" || env.APIUrl == "" || env.OAuthURL == "" || env.APIQueryUrl == "" || env.ParamsURL == "" {
 		return nil, errors.New("merchantId, merchantSecret and environment fields are required")
 	}
 
 	c := Client{
-		Client: &http.Client{},
-		env:    env,
-		token:  nil,
+		http:        &http.Client{},
+		env:         env,
+		token:       nil,
+		logPayloads: atomic.Bool{},
 	}
 
 	c.DefaultLogger()
 
-	if len(log) > 0 {
-		c.SetLogger(log[0])
+	if len(options) > 0 {
+		if options[0].HTTPClient != nil {
+			c.http = options[0].HTTPClient
+		}
+		if options[0].Logger != nil {
+			c.SetLogger(options[0].Logger)
+		}
+		c.SetPayloadLogging(options[0].LogPayloads)
 	}
 
 	token, err := c.getToken(context.Background())
@@ -129,7 +143,7 @@ func (c *Client) Send(req *http.Request, v any) error {
 	if req == nil {
 		return errors.New("send HTTP request: request is nil")
 	}
-	if c.Client == nil {
+	if c.http == nil {
 		return errors.New("send HTTP request: HTTP client is nil")
 	}
 
@@ -147,7 +161,7 @@ func (c *Client) Send(req *http.Request, v any) error {
 
 	c.logHTTPRequest(req)
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("send HTTP request: %w", err)
 	}
@@ -220,11 +234,11 @@ func (c *Client) getToken(ctx context.Context) (*tokenResponse, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.SetBasicAuth(c.env.merchant.ID, c.env.merchant.Secret)
 
-	if c.Client == nil {
+	if c.http == nil {
 		return nil, errors.New("send OAuth request: HTTP client is nil")
 	}
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("send OAuth request: %w", err)
 	}
