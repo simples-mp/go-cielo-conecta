@@ -33,12 +33,12 @@ type (
 	}
 
 	Payment struct {
-		ID                        string                `json:"PaymentId,omitempty"`
+		ID                        string                `json:"PaymentId"`
 		SubordinatedMerchantId    string                `json:",omitempty"`
 		Installments              int                   `json:",omitempty"` // Installments Quantidade de parcelas: varia de 2 a 99 para transação de financiamento.
 		Type                      string                `json:",omitempty"`
 		Interest                  Interest              `json:",omitempty"`
-		Capture                   bool                  `json:",omitempty"` // Capture identifica que a autorização deve ser com captura automática. A autorização sem captura automática é conhecida também como pré-autorização.
+		Capture                   bool                  `json:"Capture"` // Capture identifica que a autorização deve ser com captura automática. A autorização sem captura automática é conhecida também como pré-autorização.
 		SoftDescriptor            string                `json:",omitempty"`
 		CreditCard                *CreditCard           `json:",omitempty"`
 		DebitCard                 *DebitCard            `json:",omitempty"`
@@ -50,7 +50,7 @@ type (
 		CapturedDate              string                `json:",omitempty"`
 		Provider                  string                `json:",omitempty"`
 		Status                    StatusPayment         `json:",omitempty"`
-		PhysicalTransactionStatus uint                  `json:",omitempty"`
+		PhysicalTransactionStatus *uint                 `json:",omitzero"`
 		IsSplitted                bool                  `json:",omitempty"`
 		ReturnMessage             string                `json:",omitempty"`
 		ExtendedMessage           string                `json:",omitempty"`
@@ -58,7 +58,7 @@ type (
 		Currency                  string                `json:",omitempty"`
 		Country                   string                `json:",omitempty"`
 		Links                     []Link                `json:",omitempty"`
-		ServiceTaxAmount          uint64                `json:",omitempty"`
+		ServiceTaxAmount          *uint                 `json:",omitzero"`
 		PinPadInformation         *PinPadInformation    `json:",omitempty"`
 		PrintMessage              any                   `json:",omitempty"`
 		ReceiptInformation        []*ReceiptInformation `json:",omitempty"`
@@ -89,19 +89,19 @@ type (
 		InputMode                      InputMode            `json:",omitempty"`
 		ExpirationDate                 string               `json:",omitempty"`
 		AuthenticationMethod           AuthenticationMethod `json:",omitempty"`
-		IssuerId                       uint                 `json:",omitempty"`
-		BrandId                        uint                 `json:",omitempty"`
-		TruncateCardNumberWhenPrinting bool                 `json:",omitempty"`
-		PanSequenceNumber              uint                 `json:",omitempty"`
-		SaveCard                       bool                 `json:",omitempty"`
+		IssuerId                       *uint                `json:",omitzero"`
+		BrandId                        *uint                `json:",omitzero"`
+		TruncateCardNumberWhenPrinting bool                 `json:"TruncateCardNumberWhenPrinting"`
+		PanSequenceNumber              *uint                `json:",omitzero"`
+		SaveCard                       bool                 `json:"SaveCard"`
 		EmvData                        string               `json:",omitempty"`
 		TrackOneData                   string               `json:",omitempty"`
 		TrackTwoData                   string               `json:",omitempty"`
-		EncryptedCardData              EncryptedCardData    `json:",omitempty"`
-		PinBlock                       PinBlock             `json:",omitempty"`
-		IsFallback                     bool                 `json:",omitempty"`
-		BrandInformation               BrandInformation     `json:",omitempty"`
-		SecurityCodeStatus             SecurityCodeStatus   `json:",omitempty"`
+		EncryptedCardData              EncryptedCardData    `json:",omitzero"`
+		PinBlock                       PinBlock             `json:",omitzero"`
+		IsFallback                     bool                 `json:"IsFallback"`
+		BrandInformation               BrandInformation     `json:",omitzero"`
+		SecurityCodeStatus             SecurityCodeStatus   `json:",omitzero"`
 		SecurityCode                   string               `json:",omitempty"`
 	}
 
@@ -109,19 +109,19 @@ type (
 		InputMode                      InputMode            `json:",omitempty"`
 		ExpirationDate                 string               `json:",omitempty"`
 		AuthenticationMethod           AuthenticationMethod `json:",omitempty"`
-		IssuerId                       uint                 `json:",omitempty"`
-		BrandId                        uint                 `json:",omitempty"`
-		TruncateCardNumberWhenPrinting bool                 `json:",omitempty"`
-		PanSequenceNumber              uint                 `json:",omitempty"`
-		SaveCard                       bool                 `json:",omitempty"`
+		IssuerId                       *uint                `json:",omitzero"`
+		BrandId                        *uint                `json:",omitzero"`
+		TruncateCardNumberWhenPrinting bool                 `json:"TruncateCardNumberWhenPrinting"`
+		PanSequenceNumber              *uint                `json:",omitzero"`
+		SaveCard                       bool                 `json:"SaveCard"`
 		EmvData                        string               `json:",omitempty"`
 		TrackOneData                   string               `json:",omitempty"`
 		TrackTwoData                   string               `json:",omitempty"`
-		EncryptedCardData              EncryptedCardData    `json:",omitempty"`
-		PinBlock                       PinBlock             `json:",omitempty"`
-		IsFallback                     bool                 `json:",omitempty"`
-		BrandInformation               BrandInformation     `json:",omitempty"`
-		SecurityCodeStatus             SecurityCodeStatus   `json:",omitempty"`
+		EncryptedCardData              EncryptedCardData    `json:",omitzero"`
+		PinBlock                       PinBlock             `json:",omitzero"`
+		IsFallback                     bool                 `json:"IsFallback"`
+		BrandInformation               BrandInformation     `json:",omitzero"`
+		SecurityCodeStatus             SecurityCodeStatus   `json:",omitzero"`
 		SecurityCode                   string               `json:",omitempty"`
 	}
 
@@ -141,7 +141,7 @@ type (
 		TrackOneDataKSN      string         `json:"TrackOneDataKSN,omitempty"`
 		TrackTwoDataKSN      string         `json:"TrackTwoDataKSN,omitempty"`
 		InitializationVector string         `json:"InitializationVector,omitempty"`
-		IsDataInTLVFormat    bool           `json:"IsDataInTLVFormat,omitempty"`
+		IsDataInTLVFormat    bool           `json:"IsDataInTLVFormat"`
 	}
 
 	PinPadInformation struct {
@@ -167,7 +167,7 @@ type (
 		CancellationStatus CancellationStatus `json:"CancellationStatus,omitempty"`
 		ConfirmationStatus ConfirmationStatus `json:"ConfirmationStatus,omitempty"`
 		Status             TransactionStatus  `json:"Status,omitempty"`
-		ReasonCode         uint               `json:"ReasonCode,omitempty"`
+		ReasonCode         uint               `json:"ReasonCode"`
 		ReturnCode         string             `json:"ReturnCode,omitempty"`
 		ReturnMessage      string             `json:"ReturnMessage,omitempty"`
 		Links              []*Link            `json:"Links,omitempty"`
@@ -193,8 +193,8 @@ type (
 		ConfirmationStatus        ConfirmationStatus `json:"ConfirmationStatus,omitempty"`
 		ExtendedMessage           string             `json:"ExtendedMessage,omitempty"`
 		Status                    TransactionStatus  `json:"Status,omitempty"`
-		PhysicalTransactionStatus uint               `json:"PhysicalTransactionStatus,omitempty"`
-		ReasonCode                uint               `json:"ReasonCode,omitempty"`
+		PhysicalTransactionStatus uint               `json:"PhysicalTransactionStatus"`
+		ReasonCode                uint               `json:"ReasonCode"`
 		ReasonMessage             string             `json:"ReasonMessage,omitempty"`
 		ReturnCode                string             `json:"ReturnCode,omitempty"`
 		ReturnMessage             string             `json:"ReturnMessage,omitempty"`
